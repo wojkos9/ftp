@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="580.0" style="-fx-background-color: black;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.controllers.MainGuiController">
+    <children>
+        <ChoiceBox fx:id="choice_box" accessibleText="asd" layoutX="215.0" layoutY="122.0" prefWidth="150.0" />
+        <Button fx:id="choose_button" layoutX="67.0" layoutY="221.0" mnemonicParsing="false" onAction="#choose_file" prefHeight="39.0" prefWidth="117.0" text="choose file" />
+        <Label layoutX="46.0" layoutY="127.0" style="-fx-text-fill: cyan;" text="Available directories:" />
+        <Label layoutX="250.0" layoutY="27.0" style="-fx-text-fill: cyan;" text="FTP client" />
+        <Label layoutX="257.0" layoutY="64.0" style="-fx-text-fill: cyan;" text="Dir : /" />
+        <Button layoutX="437.0" layoutY="122.0" mnemonicParsing="false" text="=&gt;" />
+        <Label fx:id="label_file" layoutX="218.0" layoutY="221.0" prefHeight="39.0" prefWidth="182.0" style="-fx-background-color: gray; -fx-text-fill: cyan;" />
+      <Button layoutX="437.0" layoutY="221.0" mnemonicParsing="false" prefHeight="39.0" prefWidth="62.0" text="PUT" />
+      <Button layoutX="486.0" layoutY="122.0" mnemonicParsing="false" text="get" />
+      <Button layoutX="384.0" layoutY="122.0" mnemonicParsing="false" text="&lt;=" />
+      <Button layoutX="215.0" layoutY="174.0" mnemonicParsing="false" text="mkdir" />
+      <Button layoutX="309.0" layoutY="174.0" mnemonicParsing="false" text="rmdir" />
+      <Button layoutX="344.0" layoutY="317.0" mnemonicParsing="false" text="binary" />
+      <Button layoutX="220.0" layoutY="317.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="59.0" text="ascii" />
+    </children>
+</Pane>
