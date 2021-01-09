@@ -4,20 +4,26 @@
 <?import javafx.scene.effect.*?>
 <?import javafx.scene.layout.*?>
 
-<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="580.0" style="-fx-background-color: black;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"  fx:controller="sample.controllers.Controller">
-   <children>
-      <TextField layoutX="215.0" layoutY="168.0" prefHeight="39.0" prefWidth="170.0" style="-fx-border-radius: 50;">
-         <effect>
-            <ColorAdjust />
-         </effect></TextField>
-      <Button fx:id="connect_button" layoutX="242.0" layoutY="259.0" mnemonicParsing="false" onAction="#test" prefHeight="39.0" prefWidth="117.0" text="Connect" />
-      <Label layoutX="125.0" layoutY="180.0" style="-fx-text-fill: cyan;" text="PORT" />
-      <TextField layoutX="215.0" layoutY="115.0" prefHeight="39.0" prefWidth="170.0" style="-fx-border-radius: 50;">
-         <effect>
-            <ColorAdjust />
-         </effect>
-      </TextField>
-      <Label layoutX="125.0" layoutY="127.0" style="-fx-text-fill: cyan;" text="IP" />
-      <Label layoutX="258.0" layoutY="52.0" style="-fx-text-fill: cyan;" text="FTP client" />
-   </children>
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
+      prefWidth="580.0" style="-fx-background-color: black;" xmlns="http://javafx.com/javafx/11.0.1"
+      xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.controllers.Controller">
+    <children>
+        <TextField fx:id="port_number" layoutX="215.0" layoutY="168.0" prefHeight="39.0" prefWidth="170.0"
+                   style="-fx-border-radius: 50;">
+            <effect>
+                <ColorAdjust/>
+            </effect>
+        </TextField>
+        <Button fx:id="connect_button" layoutX="242.0" layoutY="259.0" mnemonicParsing="false" onAction="#connectToServer"
+                prefHeight="39.0" prefWidth="117.0" text="Connect"/>
+        <Label layoutX="125.0" layoutY="180.0" style="-fx-text-fill: cyan;" text="PORT"/>
+        <TextField fx:id="ip_adress" layoutX="215.0" layoutY="115.0" prefHeight="39.0" prefWidth="170.0"
+                   style="-fx-border-radius: 50;">
+            <effect>
+                <ColorAdjust/>
+            </effect>
+        </TextField>
+        <Label layoutX="125.0" layoutY="127.0" style="-fx-text-fill: cyan;" text="IP"/>
+        <Label layoutX="258.0" layoutY="52.0" style="-fx-text-fill: cyan;" text="FTP client"/>
+    </children>
 </Pane>
