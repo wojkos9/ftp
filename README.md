@@ -5,7 +5,7 @@ How to run:
 - in edit configuration change JRE to jre mentioned above
 
 
-
+<br/>
 
 
 ![image](https://user-images.githubusercontent.com/22987951/104095669-723c6780-5298-11eb-94c0-0e8d42e624d6.png)
