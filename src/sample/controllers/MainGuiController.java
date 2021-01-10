@@ -83,11 +83,12 @@ public class MainGuiController implements Initializable {
     public void backwardHandler(ActionEvent actionEvent) throws IOException {
         String text = labelPath.getText();
         int index = choice_box.getSelectionModel().getSelectedIndex();
-        if (index >= choice_box.getItems().size() || text.equals("/") || index == -1 || text.lastIndexOf('/') == -1) return;
+        if (index >= choice_box.getItems().size() || text.equals("/") || index == -1 || text.lastIndexOf('/') == -1)
+            return;
         String dir = choice_box.getItems().get(index);
         if (labelPath.getText().contains(dir))
-            dir =  text.lastIndexOf('/') != 0 ?  labelPath.getText().substring(0, text.lastIndexOf('/')) : labelPath.getText().substring(0, 1);
-                    labelPath.setText(dir);
+            dir = text.lastIndexOf('/') != 0 ? labelPath.getText().substring(0, text.lastIndexOf('/')) : labelPath.getText().substring(0, 1);
+        labelPath.setText(dir);
         Main.connectionManager.send("back to " + dir + "\n");
     }
 
