@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "command.h"
+
 #include <pthread.h>
 
 #define PORT 2121
@@ -35,73 +37,6 @@ int set_nonblocking(int sockfd) {
     if (r == -1)
         perror("Set reuse addr"), cleanup(0);
     return errno;
-}
-
-struct command {char *text; char *save; int toklen; int state;};
-
-int com_adv(struct command *com) {
-    if (0 != com->state) {
-        return com->state;
-    }
-    if (!com->save) {
-        com->save = com->text;
-    } else {
-        com->save += com->toklen;
-    }
-    char *next = strchr(com->save, ' ');
-    if (!next) {
-        next = strchr(com->save, '\r');
-        if (!next) {
-            com->state = -1;
-            return -1;
-        } else {
-            com->state = 1;
-        }
-    }
-        
-    
-        
-    com->toklen = next - com->save;
-
-    return 0;
-}
-
-int com_readn(struct command *com, int sockfd, int n) {
-    com->state = 0;
-    com->save = NULL;
-    com->toklen = 0;
-    int i = 0;
-    do {
-        r = read(sockfd, com->text+i, 1);
-        if (n == -1) {
-            return -1;
-        }
-        if (com->text[i] == '\n')
-            break;
-        i++;
-    } while (i < n && r > 0);
-    if (!com_adv(com))
-        return -1;
-    return i;
-}
-
-
-int com_advn(struct command *com, int n) {
-    while (n--) {
-        r = com_adv(com);
-    }
-    return r;
-}
-
-int com_cmp(struct command *com, char *cmps) {
-    return strncmp(com->save, cmps, com->toklen);
-}
-
-int com_storen(struct command *com, char *dst, int n) {
-    if (n < com->toklen+1)
-        return -1;
-    strncpy(dst, com->save, com->toklen);
-    return 0;
 }
 
 int server_say(int sockfd, int code, char *msg) {
@@ -183,13 +118,16 @@ int main() {
                             printf("ls\n");
                         }
                         write(c, "file\r\n", 6);
-                        server_say(c, 226, "List sent");
-                        curr_state = FIN;
+                        //server_say(c, 226, "List sent");
                     } else if (!com_cmp(&com, "SYST")) {
                         server_say(c, 215, "Linux");
                         break;
                     } else if (!com_cmp(&com, "PORT")) {
                         // TODO
+                        server_say(c, 202, "PORT not implemented");
+                    } else if (!com_cmp(&com, "QUIT")) {
+                        server_say(c, 221, "Goodbye");
+                        break;
                     } else {
                         printf("N/I: %s\n", com.text);
                         server_say(c, 202, "Not implemented");
