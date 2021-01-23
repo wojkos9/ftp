@@ -13,7 +13,7 @@ int com_adv(struct command *com) {
     if (!com->save) {
         com->save = com->text;
     } else {
-        com->save += com->toklen;
+        com->save += com->toklen+1;
     }
     char *next = strchr(com->save, ' ');
     if (!next) {
@@ -44,10 +44,11 @@ int com_readn(struct command *com, int sockfd, int n) {
         if (r == -1) {
             return -1;
         }
-        if (com->text[i] == '\n')
-            break;
         i++;
-    } while (i < n && r > 0);
+        if (com->text[i-1] == '\n')
+            break;
+    } while (i < n-1 && r > 0);
+    com->text[i]=0;
     if (!com_adv(com))
         return -1;
     return i;
