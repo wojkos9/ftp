@@ -41,9 +41,41 @@ int set_nonblocking(int sockfd) {
 
 int server_say(int sockfd, int code, char *msg) {
     char buf[BSIZE];
-    r = snprintf(buf, BSIZE, "%d %s\r\n", code, msg);
-    r = write(sockfd, buf, r);
+    int n;
+    n = snprintf(buf, BSIZE, "%d %s\r\n", code, msg);
+    r = write(sockfd, buf, n);
+    write(STDOUT_FILENO, buf, n);
     return 0;
+}
+char cached_read = 0;
+long ascii_read(int fd, void *dst, long unsigned int n) {
+    int r, t, i;
+    char *cdst = (char*)dst;
+    t = 0;
+    i = 0;
+    if (n > 0 && cached_read) {
+        cdst[0] = cached_read;
+        t++;
+        i++;
+        cached_read = 0;
+    }
+    for(; i < n; i++) {
+        r = read(fd, cdst+i, 1);
+        if (r < 0) return r;
+        if (r == 0)
+            break;
+        t++;
+        if (cdst[i] == '\n') {
+            cdst[i] = '\r';
+            if (i < n-1) {
+                cdst[++i] = '\n';
+                t++;
+            } else {
+                cached_read = '\n';
+            }
+        }
+    }
+    return t;
 }
 
 int main() {
@@ -86,6 +118,7 @@ int main() {
             perror("Connect client");
             goto fail;
         }
+        long (*read_f)(int, void*, long unsigned int) = ascii_read;
 
         printf("Connection from %s:%d\n", inet_ntoa(cin.sin_addr), ntohs(cin.sin_port));
 
@@ -111,6 +144,18 @@ int main() {
                         curr_state = LOGIN;
                         server_say(c, 331, "password, please");
                         break;
+                    } else if (!com_cmp(&com, "TYPE")) {
+                        com_adv(&com);
+                        if (!com_cmp(&com, "A")) {
+                            read_f = ascii_read;
+                            server_say(c, 220, "Switch to ASCII");
+                        } else if (!com_cmp(&com, "I")) {
+                            read_f = read;
+                            server_say(c, 220, "Switch to BINARY");
+                        } else {
+                            read_f = read;
+                            server_say(c, 202, "Not implemented");
+                        }
                     } else if (!com_cmp(&com, "LIST")) {
                         char arg[BSIZE] = {0};
                         r = com_adv(&com);
@@ -130,8 +175,6 @@ int main() {
                         char arg[BSIZE] = {0};
                         char buf[BSIZE] = {0};
                         int fd = -1;
-                        char *t, *e;
-                        e = buf+BSIZE;
                         int n;
                         com_adv(&com);
                         com_storen(&com, arg, BSIZE);
@@ -143,9 +186,9 @@ int main() {
                         if (fd == -1) {
                             server_say(c, 550, "Could not open");
                         } else {
-                            server_say(c, 150, "Binary transfer");
+                            server_say(c, 150, "Transfer in progress");
                             do {
-                                n = read(fd, buf, BSIZE);
+                                n = read_f(fd, buf, BSIZE);
                                 if (n == -1)
                                     perror("Read file");
                                 r = write(data_sock, buf, n);
@@ -157,7 +200,6 @@ int main() {
                             close(data_sock);
                         }
                     } 
-                    
                     else if (!com_cmp(&com, "SYST")) {
                         server_say(c, 215, "Linux");
                         break;
@@ -188,7 +230,7 @@ int main() {
                         server_say(c, 200, "PORT command successful");
                     } else if (!com_cmp(&com, "QUIT")) {
                         server_say(c, 221, "Goodbye");
-                        break;
+                        curr_state = FIN;
                     } else {
                         printf("N/I: %s\n", com.text);
                         server_say(c, 202, "Not implemented");
