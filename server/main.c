@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #include "command.h"
 #include "ascii_read.h"
@@ -159,7 +160,8 @@ int main() {
                         curr_state = LOGIN;
                         server_say(c, 331, "password, please");
                         break;
-                    } else if (!com_cmp(&com, "TYPE")) {
+                    } 
+                    else if (!com_cmp(&com, "TYPE")) {
                         com_adv(&com);
                         if (!com_cmp(&com, "A")) {
                             curr_mode = ASCII;
@@ -170,7 +172,8 @@ int main() {
                         } else {
                             server_say(c, 202, "Not implemented");
                         }
-                    } else if (!com_cmp(&com, "LIST")) {
+                    } 
+                    else if (!com_cmp(&com, "LIST")) {
                         char arg[BSIZE] = {0};
                         r = com_adv(&com);
                         if (!r) {
@@ -186,7 +189,8 @@ int main() {
                             close(data_sock);
                             data_sock = c;
                         }
-                    } else if (!com_cmp(&com, "RETR")) {
+                    } 
+                    else if (!com_cmp(&com, "RETR")) {
                         char *path = com_get_path(&com, local_root, cwd);
                         int fd;
 
@@ -203,11 +207,30 @@ int main() {
                         free(path);
                         
                         transfer(data_sock, fd, curr_mode==BINARY ? read : read_a2i);
-                    }
+                    } 
+                    else if (!com_cmp(&com, "MKD")) {
+                        char *path = com_get_path(&com, local_root, cwd);
+                        if (!path || (r = mkdir(path, 0755)) == -1) {
+                            server_say(c, 550, "Operation failed");
+                        } else {
+                            server_say(c, 250, "Directory created");
+                        }
+                        if (path) free(path);
+                    } 
+                    else if (!com_cmp(&com, "RMD")) {
+                        char *path = com_get_path(&com, local_root, cwd);
+                        if (!path || (r = rmdir(path)) == -1) {
+                            server_say(c, 550, "Operation failed");
+                        } else {
+                            server_say(c, 250, "Directory removed");
+                        }
+                        if (path) free(path);
+                    } 
                     else if (!com_cmp(&com, "SYST")) {
                         server_say(c, 215, "UNIX Type: L8");
                         break;
-                    } else if (!com_cmp(&com, "PORT")) {
+                    } 
+                    else if (!com_cmp(&com, "PORT")) {
                         char arg[BSIZE] = {0};
                         com_adv(&com);
                         com_storen(&com, arg, BSIZE);
