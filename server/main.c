@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 #include "command.h"
 #include "ascii_read.h"
@@ -83,11 +84,17 @@ int transfer(int from_fd, int to_fd, readf_t read_f) {
 
 char* com_get_path(struct command *com, const char *local_root, char *cwd) {
     char arg[BSIZE] = {0};
-    char *buf = (char*) malloc(BSIZE);
-    com_adv(com);
+    char *buf;
+    int abs;
+    int r;
+    r = com_adv(com);
+    if (r) {
+        return NULL;
+    }
     com_storen(com, arg, BSIZE);
     
-    int abs = arg[0] == '/';
+    buf = (char*) malloc(BSIZE);
+    abs = arg[0] == '/';
     snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
     return buf;
 }
@@ -174,21 +181,27 @@ int main() {
                         }
                     } 
                     else if (!com_cmp(&com, "LIST")) {
-                        char arg[BSIZE] = {0};
-                        r = com_adv(&com);
-                        if (!r) {
-                            com_storen(&com, arg, BSIZE);
-                            printf("lsarg %s\n", arg);
-                        } else {
-                            printf("ls\n");
+                        char *path = NULL;
+                        struct dirent *dir;
+                        path = com_get_path(&com, local_root, cwd);
+                        DIR *d = opendir(path ? path : local_root);
+                        if (path) {
+                            printf(path);
+                            free(path);
                         }
                         server_say(c, 150, "Sending directory listing");
-                        write(data_sock, "file\r\n", 6);
-                        server_say(c, 226, "List sent");
-                        if (data_sock != c) {
-                            close(data_sock);
-                            data_sock = c;
+                        while ((dir = readdir(d)) != NULL) {
+                            if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, "..")) {
+                                write(data_sock, dir->d_name, strlen(dir->d_name));
+                                if (dir->d_type == DT_DIR) {
+                                    write(data_sock, "/", 1);
+                                }
+                                write(data_sock, "\r\n", 2);
+                            }
                         }
+                        server_say(c, 226, "List sent");
+
+                        close(data_sock);
                     } 
                     else if (!com_cmp(&com, "RETR")) {
                         char *path = com_get_path(&com, local_root, cwd);
