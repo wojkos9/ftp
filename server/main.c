@@ -49,6 +49,48 @@ int server_say(int sockfd, int code, char *msg) {
     return 0;
 }
 
+typedef long (*readf_t)(int, void*, long unsigned int);
+
+struct transfer_params {
+    int data_sock;
+    readf_t read_f;
+};
+
+int transfer(int from_fd, int to_fd, readf_t read_f) {
+    char buf[BSIZE];
+    int n;
+    if (from_fd == -1) {
+        server_say(c, 550, "Could not open");
+        return -1;
+    } else {
+        server_say(c, 150, "Transfer in progress");
+        do {
+            n = read_f(from_fd, buf, BSIZE);
+            if (n == -1)
+                perror("Read file");
+            r = write(to_fd, buf, n);
+        } while (n > 0);
+        server_say(c, 226, "Transfer complete");
+    }
+    
+    if (to_fd != c) {
+        close(to_fd);
+        to_fd = c;
+    }
+    return 0;
+}
+
+char* com_get_path(struct command *com, const char *local_root, char *cwd) {
+    char arg[BSIZE] = {0};
+    char *buf = (char*) malloc(BSIZE);
+    com_adv(com);
+    com_storen(com, arg, BSIZE);
+    
+    int abs = arg[0] == '/';
+    snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+    return buf;
+}
+
 int main() {
     struct sockaddr_in sin;
     const char *local_root = "root";
@@ -145,68 +187,22 @@ int main() {
                             data_sock = c;
                         }
                     } else if (!com_cmp(&com, "RETR")) {
-                        char arg[BSIZE] = {0};
-                        char buf[BSIZE] = {0};
-                        int fd = -1;
-                        int n;
-                        com_adv(&com);
-                        com_storen(&com, arg, BSIZE);
-                        
-                        int abs = arg[0] == '/';
-                        snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+                        char *path = com_get_path(&com, local_root, cwd);
+                        int fd;
 
-                        long (*read_f)(int, void*, long unsigned int) = curr_mode==BINARY ? read : read_i2a;
-
-                        fd = open(buf, O_RDONLY);
-                        if (fd == -1) {
-                            server_say(c, 550, "Could not open");
-                        } else {
-                            server_say(c, 150, "Transfer in progress");
-                            do {
-                                n = read_f(fd, buf, BSIZE);
-                                if (n == -1)
-                                    perror("Read file");
-                                r = write(data_sock, buf, n);
-                            } while (n > 0);
-                            server_say(c, 226, "Transfer complete");
-                        }
+                        fd = open(path, O_RDONLY);
+                        free(path);
                         
-                        if (data_sock != c) {
-                            close(data_sock);
-                            data_sock = c;
-                        }
+                        transfer(fd, data_sock, curr_mode==BINARY ? read : read_i2a);
                     }
                     else if (!com_cmp(&com, "STOR")) {
-                        char arg[BSIZE] = {0};
-                        char buf[BSIZE] = {0};
-                        int fd = -1;
-                        int n;
-                        com_adv(&com);
-                        com_storen(&com, arg, BSIZE);
-                        
-                        int abs = arg[0] == '/';
-                        snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+                        char *path = com_get_path(&com, local_root, cwd);
+                        int fd;
 
-                        long (*read_f)(int, void*, long unsigned int) = curr_mode==BINARY ? read : read_a2i;
-
-                        fd = open(buf, O_WRONLY|O_CREAT, 0644);
-                        if (fd == -1) {
-                            server_say(c, 550, "Could not open");
-                        } else {
-                            server_say(c, 150, "Transfer in progress");
-                            do {
-                                n = read_f(data_sock, buf, BSIZE);
-                                if (n == -1)
-                                    perror("Write to file");
-                                r = write(fd, buf, n);
-                            } while (n > 0);
-                            server_say(c, 226, "Transfer complete");
-                        }
+                        fd = open(path, O_WRONLY|O_CREAT, 0644);
+                        free(path);
                         
-                        if (data_sock != c) {
-                            close(data_sock);
-                            data_sock = c;
-                        }
+                        transfer(data_sock, fd, curr_mode==BINARY ? read : read_a2i);
                     }
                     else if (!com_cmp(&com, "SYST")) {
                         server_say(c, 215, "UNIX Type: L8");
