@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include "command.h"
+#include "ascii_read.h"
 
 #include <pthread.h>
 
@@ -46,36 +47,6 @@ int server_say(int sockfd, int code, char *msg) {
     r = write(sockfd, buf, n);
     write(STDOUT_FILENO, buf, n);
     return 0;
-}
-char cached_read = 0;
-long ascii_read(int fd, void *dst, long unsigned int n) {
-    int r, t, i;
-    char *cdst = (char*)dst;
-    t = 0;
-    i = 0;
-    if (n > 0 && cached_read) {
-        cdst[0] = cached_read;
-        t++;
-        i++;
-        cached_read = 0;
-    }
-    for(; i < n; i++) {
-        r = read(fd, cdst+i, 1);
-        if (r < 0) return r;
-        if (r == 0)
-            break;
-        t++;
-        if (cdst[i] == '\n') {
-            cdst[i] = '\r';
-            if (i < n-1) {
-                cdst[++i] = '\n';
-                t++;
-            } else {
-                cached_read = '\n';
-            }
-        }
-    }
-    return t;
 }
 
 int main() {
@@ -118,11 +89,13 @@ int main() {
             perror("Connect client");
             goto fail;
         }
-        long (*read_f)(int, void*, long unsigned int) = ascii_read;
 
         printf("Connection from %s:%d\n", inet_ntoa(cin.sin_addr), ntohs(cin.sin_port));
 
         enum state{INIT, IDLE, LOGIN, ERROR, FIN};
+        enum mode{ASCII, BINARY};
+
+        enum mode curr_mode = BINARY;
         enum state curr_state = INIT;
 
         struct command com;
@@ -147,13 +120,12 @@ int main() {
                     } else if (!com_cmp(&com, "TYPE")) {
                         com_adv(&com);
                         if (!com_cmp(&com, "A")) {
-                            read_f = ascii_read;
+                            curr_mode = ASCII;
                             server_say(c, 220, "Switch to ASCII");
                         } else if (!com_cmp(&com, "I")) {
-                            read_f = read;
+                            curr_mode = BINARY;
                             server_say(c, 220, "Switch to BINARY");
                         } else {
-                            read_f = read;
                             server_say(c, 202, "Not implemented");
                         }
                     } else if (!com_cmp(&com, "LIST")) {
@@ -170,6 +142,7 @@ int main() {
                         server_say(c, 226, "List sent");
                         if (data_sock != c) {
                             close(data_sock);
+                            data_sock = c;
                         }
                     } else if (!com_cmp(&com, "RETR")) {
                         char arg[BSIZE] = {0};
@@ -181,6 +154,8 @@ int main() {
                         
                         int abs = arg[0] == '/';
                         snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+
+                        long (*read_f)(int, void*, long unsigned int) = curr_mode==BINARY ? read : read_i2a;
 
                         fd = open(buf, O_RDONLY);
                         if (fd == -1) {
@@ -198,10 +173,43 @@ int main() {
                         
                         if (data_sock != c) {
                             close(data_sock);
+                            data_sock = c;
                         }
-                    } 
+                    }
+                    else if (!com_cmp(&com, "STOR")) {
+                        char arg[BSIZE] = {0};
+                        char buf[BSIZE] = {0};
+                        int fd = -1;
+                        int n;
+                        com_adv(&com);
+                        com_storen(&com, arg, BSIZE);
+                        
+                        int abs = arg[0] == '/';
+                        snprintf(buf, BSIZE, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+
+                        long (*read_f)(int, void*, long unsigned int) = curr_mode==BINARY ? read : read_a2i;
+
+                        fd = open(buf, O_WRONLY|O_CREAT, 0644);
+                        if (fd == -1) {
+                            server_say(c, 550, "Could not open");
+                        } else {
+                            server_say(c, 150, "Transfer in progress");
+                            do {
+                                n = read_f(data_sock, buf, BSIZE);
+                                if (n == -1)
+                                    perror("Write to file");
+                                r = write(fd, buf, n);
+                            } while (n > 0);
+                            server_say(c, 226, "Transfer complete");
+                        }
+                        
+                        if (data_sock != c) {
+                            close(data_sock);
+                            data_sock = c;
+                        }
+                    }
                     else if (!com_cmp(&com, "SYST")) {
-                        server_say(c, 215, "Linux");
+                        server_say(c, 215, "UNIX Type: L8");
                         break;
                     } else if (!com_cmp(&com, "PORT")) {
                         char arg[BSIZE] = {0};
@@ -257,7 +265,9 @@ int main() {
         }
         
         disconnect:
+        printf("Disconnecting client\n");
         close(c);
+        c = -1;
     }
 
 
