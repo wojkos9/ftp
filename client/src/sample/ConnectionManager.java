@@ -71,7 +71,7 @@ public class ConnectionManager {
                 Main.socket = socket;
                 this.socket.setTcpNoDelay(true);
 
-                while (true) {
+                while (socket.isConnected()) {
                     String cominginText = "";
                     try {
                         cominginText = in.readLine();
@@ -86,8 +86,7 @@ public class ConnectionManager {
             }
         }
 
-        public Socket
-        forkConnection() {
+        public Socket forkConnection() {
             String cmd = "PORT " + socket.getLocalAddress().toString().substring(1).replace(".", ",");
             ServerSocket sock;
             Socket dataSock;

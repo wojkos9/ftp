@@ -55,6 +55,10 @@ public class MainGuiController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         fileChooser = new FileChooser();
+
+
+        connectionManager.send("LIST\r\n");
+
         choice_box.getItems().add("current dor");
         choice_box.getItems().add("current dir");
     }
@@ -70,10 +74,13 @@ public class MainGuiController implements Initializable {
                 super.run();
                 Socket dataSocket = connectionManager.forkConnection();
                 connectionManager.send("STOR "+filename+"\r\n");
-                try(
-                PrintWriter out = new PrintWriter(dataSocket.getOutputStream());
-                FileInputStream fis = new FileInputStream(new File(filename));) {
-                    out.print("FILE");
+                try(    OutputStream out = dataSocket.getOutputStream();
+                        FileInputStream fis = new FileInputStream(new File(filename));) {
+                    byte[] buffer = new byte[4096];
+                    int n;
+                    while ((n = fis.read(buffer)) > 0) {
+                        out.write(buffer, 0, n);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
