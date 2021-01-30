@@ -22,7 +22,10 @@ import java.util.logging.Logger;
 public class Controller implements Initializable {
     public TextField ip_adress;
     public TextField port_number;
-    public ConnectionManager connectionManager;
+    private ConnectionManager connectionManager;
+
+
+
     @FXML
     private Button connect_button;
 
@@ -31,10 +34,12 @@ public class Controller implements Initializable {
 
     @FXML
     public void connectToServer() throws InterruptedException {
-        connectionManager = new ConnectionManager();
+        connectionManager = Main.getConnectionManager();
+        connectionManager.setConnectionParams(ip_adress.getText(), port_number.getText());
         connectionManager.startConnection();
         Thread.sleep(1000);
-        Main.connectionManager= connectionManager;
+        connectionManager.send("USER user\r\n");
+        connectionManager.send("PASSWORD password\r\n");
         System.out.println(connectionManager.getSocket());
         Socket clientSocket = connectionManager.getSocket();
         if(connectionManager.getSocket() != null){
@@ -64,7 +69,7 @@ public class Controller implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        ip_adress.setText("127.0.0.1");
-        port_number.setText("8080");
+        ip_adress.setText(Main.ipAddress);
+        port_number.setText(Main.portNumber);
     }
 }

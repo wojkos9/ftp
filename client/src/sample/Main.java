@@ -9,16 +9,20 @@ import javafx.stage.Stage;
 import java.net.Socket;
 
 public class Main extends Application {
-    static String ipAddress;
-    static String portNumber;
+    public static String ipAddress;
+    public static String portNumber;
     public static Socket socket;
-    public static ConnectionManager connectionManager;
+    private static ConnectionManager connectionManager;
     static boolean socketCreatedProperty;
 
     static {
         ipAddress = "127.0.0.1";
-        portNumber = "8080";
+        portNumber = "2121";
         socketCreatedProperty = false;
+    }
+
+    public static ConnectionManager getConnectionManager() {
+        return connectionManager;
     }
 
     @Override
@@ -27,11 +31,8 @@ public class Main extends Application {
         primaryStage.setTitle("Hello World");
         primaryStage.setScene(new Scene(root, 600   , 400));
         primaryStage.show();
+        connectionManager = new ConnectionManager();
     }
-
-
-
-
 
 
 
