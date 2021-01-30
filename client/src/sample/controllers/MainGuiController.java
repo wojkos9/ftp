@@ -9,13 +9,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import sample.ConnectionManager;
 import sample.Main;
 
-import java.awt.*;
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -55,12 +52,7 @@ public class MainGuiController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         fileChooser = new FileChooser();
-
-
-        connectionManager.send("LIST\r\n");
-
-        choice_box.getItems().add("current dor");
-        choice_box.getItems().add("current dir");
+        updateDirList();
     }
 
     @FXML
@@ -81,6 +73,7 @@ public class MainGuiController implements Initializable {
                     while ((n = fis.read(buffer)) > 0) {
                         out.write(buffer, 0, n);
                     }
+                    updateDirList();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -91,19 +84,80 @@ public class MainGuiController implements Initializable {
                 }
             }
         }.start();
-        String msg = label_file.getText() + "\n";
-        connectionManager.send(msg);
+    }
+
+    public void getHandler(ActionEvent actionEvent) {
+        String filename = choice_box.getValue();
+        if (filename.equals("")) return;
+        new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                Socket dataSocket = connectionManager.forkConnection();
+                connectionManager.send("RETR "+filename+"\r\n");
+                try(    InputStream in = dataSocket.getInputStream();
+                        FileOutputStream fos = new FileOutputStream(new File(filename));) {
+                    byte[] buffer = new byte[4096];
+                    int n;
+                    while ((n = in.read(buffer)) > 0) {
+                        fos.write(buffer, 0, n);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    dataSocket.close();
+                } catch (IOException e) {
+                    System.err.println("ERROR " + e.getMessage());
+                }
+            }
+        }.start();
     }
 
     public void createDirectory(ActionEvent actionEvent) throws IOException {
         if (dirName.getText().equals("")) return;
-        String msg = "mkdir:" + dirName.getText() + "\n";
-        connectionManager.send(msg);
+        connectionManager.send("MKD "+dirName.getText()+"\r\n");
         dirName.setText("");
+        updateDirList();
     }
 
     public void dirHandler(ActionEvent actionEvent) throws IOException {
-        connectionManager.send("dir\n");
+        updateDirList();
+    }
+
+    private void updateDirList() {
+        new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                Socket dataSocket = connectionManager.forkConnection();
+                connectionManager.send("LIST\r\n");
+                choice_box.getItems().clear();
+                try(    BufferedReader in = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                ) {
+                    String line;
+                    while (!(line = in.readLine()).isEmpty()) {
+                        choice_box.getItems().add(line.strip());
+                        System.out.println(line);
+                    }
+                    choice_box.getSelectionModel().selectFirst();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    dataSocket.close();
+                } catch (IOException e) {
+                    System.err.println("ERROR " + e.getMessage());
+                }
+
+            }
+        }.start();
+    }
+
+    public void rmdirHandler(ActionEvent actionEvent) {
+        if (dirName.getText().equals("")) return;
+        connectionManager.send("RMD "+dirName.getText()+"\r\n");
+        updateDirList();
     }
 
 
@@ -116,7 +170,7 @@ public class MainGuiController implements Initializable {
         if (labelPath.getText().contains(dir))
             dir = text.lastIndexOf('/') != 0 ? labelPath.getText().substring(0, text.lastIndexOf('/')) : labelPath.getText().substring(0, 1);
         labelPath.setText(dir);
-        connectionManager.send("back to " + dir + "\n");
+        connectionManager.send("CDUP\r\n");
     }
 
     public void forwardHandler(ActionEvent actionEvent) throws IOException {
@@ -129,25 +183,15 @@ public class MainGuiController implements Initializable {
             dir = labelPath.getText() + '/' + dir;
         }
         labelPath.setText(dir);
-        connectionManager.send("forward" + dir + "\n");
+        connectionManager.send("CWD " + dir + "\r\n");
     }
 
-    public void getHandler(ActionEvent actionEvent) {
-        System.out.println(choice_box.getSelectionModel().getSelectedIndex());
-        connectionManager.send("get\n");
-    }
-
-
-    public void rmdirHandler(ActionEvent actionEvent) {
-        if (dirName.getText().equals("")) return;
-        connectionManager.send("rmdir\n");
-    }
 
     public void binaryHandler(ActionEvent actionEvent) {
-        connectionManager.send("binary\n");
+        connectionManager.send("TYPE I\r\n");
     }
 
     public void asciiHandler(ActionEvent actionEvent) {
-        connectionManager.send("ascii\n");
+        connectionManager.send("TYPE A\r\n");
     }
 }
