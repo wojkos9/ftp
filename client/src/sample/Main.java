@@ -12,6 +12,11 @@ public class Main extends Application {
     public static String ipAddress;
     public static String portNumber;
     public static Socket socket;
+
+    public static void setConnectionManager(ConnectionManager connectionManager) {
+        Main.connectionManager = connectionManager;
+    }
+
     private static ConnectionManager connectionManager;
     static boolean socketCreatedProperty;
 
@@ -28,7 +33,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception{
         Parent root = FXMLLoader.load(getClass().getResource("pages/connect.fxml"));
-        primaryStage.setTitle("Hello World");
+        primaryStage.setTitle("FTP client");
         primaryStage.setScene(new Scene(root, 600   , 400));
         primaryStage.show();
         connectionManager = new ConnectionManager();

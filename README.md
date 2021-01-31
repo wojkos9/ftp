@@ -6,5 +6,4 @@ How to run:
 
 <br/>
 
-
-![image](https://user-images.githubusercontent.com/22987951/104095669-723c6780-5298-11eb-94c0-0e8d42e624d6.png)
+![image](https://user-images.githubusercontent.com/22987951/106400612-b64a0480-641f-11eb-89d9-5b22a096d626.png)
