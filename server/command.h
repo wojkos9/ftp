@@ -68,5 +68,22 @@ int com_storen(struct command *com, char *dst, int n) {
     strncpy(dst, com->save, com->toklen);
     return 0;
 }
+#define BSIZE1 256
+char* com_get_path(struct command *com, const char *local_root, char *cwd) {
+    char arg[BSIZE1] = {0};
+    char *buf;
+    int abs;
+    int r;
+    r = com_adv(com);
+    if (r) {
+        return NULL;
+    }
+    com_storen(com, arg, BSIZE1);
+    
+    buf = (char*) malloc(BSIZE1);
+    abs = arg[0] == '/';
+    snprintf(buf, BSIZE1, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
+    return buf;
+}
 
 #endif
