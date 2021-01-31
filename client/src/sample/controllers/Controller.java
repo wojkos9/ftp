@@ -10,9 +10,6 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import sample.Main;
 import sample.ConnectionManager;
-
-import java.net.Socket;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -24,8 +21,6 @@ public class Controller implements Initializable {
     public TextField port_number;
     private ConnectionManager connectionManager;
 
-
-
     @FXML
     private Button connect_button;
 
@@ -34,14 +29,12 @@ public class Controller implements Initializable {
 
     @FXML
     public void connectToServer() throws InterruptedException {
-        connectionManager = Main.getConnectionManager();
+        connectionManager = new ConnectionManager();
+        Main.setConnectionManager(connectionManager);
         connectionManager.setConnectionParams(ip_adress.getText(), port_number.getText());
         connectionManager.startConnection();
         Thread.sleep(1000);
-        connectionManager.send("USER user\r\n");
-        connectionManager.send("PASSWORD password\r\n");
         System.out.println(connectionManager.getSocket());
-        Socket clientSocket = connectionManager.getSocket();
         if(connectionManager.getSocket() != null){
             showMainGuiWindow();
         }
@@ -57,8 +50,7 @@ public class Controller implements Initializable {
             Scene scene = new Scene(fxmlLoader.load(), 600, 400);
             Stage stage = new Stage();
             stage.setResizable(false);
-
-            stage.setTitle("New Window");
+            stage.setTitle("FTP client");
             stage.setScene(scene);
             stage.show();
         } catch (IOException e) {
