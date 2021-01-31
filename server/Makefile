@@ -1,5 +1,5 @@
 main: main.c *.h
-	gcc -o main main.c -Wall -pthread $(CFLAGS)
+	gcc -o ftp-server main.c -Wall -pthread $(CFLAGS)
 
 clean:
-	rm main
+	rm ftp-server
