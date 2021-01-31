@@ -3,7 +3,9 @@
 #define UTILS_H
 
 #include <stdio.h>
+#include <strings.h>
 #include <errno.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -25,9 +27,27 @@ int server_say(int sockfd, int code, char *msg) {
     return r;
 }
 
-struct read_params {
-    char cache;
-    int is_cached;
-};
+int sockaddr_from_str(char *arg, struct sockaddr_in *sa) {
+    int r;
+    bzero(sa, sizeof(struct sockaddr_in));
+    int addr[6];
+    sa->sin_family = AF_INET;
+    r = sscanf(arg, "%d,%d,%d,%d,%d,%d", &addr[0], &addr[1], &addr[2], &addr[3], &addr[4], &addr[5]);
+    sa->sin_addr.s_addr = addr[0]+(1<<8)*addr[1]+(1<<16)*addr[2]+(1<<24)*addr[3];
+    sa->sin_port = addr[4]+(1<<8)*addr[5];
+    return r;
+}
+
+int dir_exists(const char *path) {
+    DIR* dir = opendir(path);
+    if (dir) {
+        closedir(dir);
+        return 1;
+    } else if (errno == ENOENT) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
 
 #endif

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "utils.h"
+
 struct command {char *text; char *save; int toklen; int state;};
 
 int com_adv(struct command *com) {
@@ -25,8 +27,6 @@ int com_adv(struct command *com) {
             com->state = 1;
         }
     }
-        
-    
         
     com->toklen = next - com->save;
 
@@ -84,6 +84,16 @@ char* com_get_path(struct command *com, const char *local_root, char *cwd) {
     abs = arg[0] == '/';
     snprintf(buf, BSIZE1, abs ? "%s%s" : "%s%s%s", local_root, abs ? arg : cwd, arg);
     return buf;
+}
+
+int com_get_sockaddr(struct command *com, struct sockaddr_in *sa) {
+    int r;
+    char arg[BSIZE1] = {0};
+    com_adv(com);
+    com_storen(com, arg, BSIZE1);
+
+    r = sockaddr_from_str(arg, sa);
+    return r != 6;
 }
 
 #endif

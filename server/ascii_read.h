@@ -72,7 +72,6 @@ long read_i2a(int fd, void *dst, long unsigned int n, struct read_params *params
     }
     for(; i < n; i++) {
         r = read(fd, dst+i, 1);
-        usleep(10000);
         if (r <= 0) goto leave;
         
         if (cdst[i] == '\n') {

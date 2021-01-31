@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+struct read_params {
+    char cache;
+    int is_cached;
+};
+
 typedef long (*readf_t)(int, void*, long unsigned int, struct read_params *);
 
 long reg_read(int fd, void* buf, long unsigned int n, struct read_params *unused) {
@@ -15,9 +20,11 @@ long reg_read(int fd, void* buf, long unsigned int n, struct read_params *unused
 struct transfer_params {
     int c; int from_fd; int to_fd; readf_t read_f; int *transfer_fin;
 };
+
 #ifndef TBSIZE
-#define TBSIZE 3
+#define TBSIZE 4096
 #endif
+
 void *transfer_thread(void *args) {
     struct transfer_params *params = args;
     int c = params->c;
