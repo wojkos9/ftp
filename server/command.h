@@ -55,7 +55,11 @@ int com_readn(struct command *com, int sockfd, int n) {
 }
 
 int com_cmp(struct command *com, char *cmps) {
-    return strncmp(com->save, cmps, com->toklen);
+    int r, i, n;
+    i = 0;
+    n = com->toklen;
+    while (i < n && !(r=(com->save[i]&0xdf)-cmps[i])) i++;
+    return r;
 }
 
 int com_storen(struct command *com, char *dst, int n) {
