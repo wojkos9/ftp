@@ -14,7 +14,8 @@
 
 #include "command.h"
 #include "ascii_read.h"
-
+#include "utils.h"
+#include "transfer.h"
 #include <pthread.h>
 
 #define PORT 2121
@@ -32,61 +33,6 @@ void cleanup(int _) {
     exit(0);
 }
 
-int set_nonblocking(int sockfd) {
-    int reuse_addr_val = 1; 
-    int r;
-    r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr_val, sizeof(reuse_addr_val));
-    if (r == -1)
-        perror("Set reuse addr"), cleanup(0);
-    return errno;
-}
-
-int server_say(int sockfd, int code, char *msg) {
-    char buf[BSIZE];
-    int n, r;
-    n = snprintf(buf, BSIZE, "%d %s\r\n", code, msg);
-    r = write(sockfd, buf, n);
-    write(STDOUT_FILENO, buf, n);
-    return r;
-}
-
-typedef long (*readf_t)(int, void*, long unsigned int, struct read_params *);
-
-long reg_read(int fd, void* buf, long unsigned int n, struct read_params *unused) {
-    return read(fd, buf, n);
-}
-
-struct transfer_params {
-    int data_sock;
-    readf_t read_f;
-};
-#ifndef TBSIZE
-#define TBSIZE 3
-#endif
-int transfer(int c, int from_fd, int to_fd, readf_t read_f) {
-    char buf[TBSIZE];
-    int n;
-    struct read_params params = {0, 0};
-    if (from_fd == -1) {
-        server_say(c, 550, "Could not open");
-        return -1;
-    } else {
-        server_say(c, 150, "Transfer in progress");
-        do {
-            n = read_f(from_fd, buf, TBSIZE, &params);
-            if (n == -1)
-                perror("Read file");
-            write(to_fd, buf, n);
-        } while (n > 0);
-        server_say(c, 226, "Transfer complete");
-    }
-    
-    if (to_fd != c) {
-        close(to_fd);
-        to_fd = c;
-    }
-    return 0;
-}
 
 struct thread_params {
     int c;
@@ -100,6 +46,7 @@ void *session_thread(void *arg) {
     int r;
     int data_sock = c;
     char buf[BSIZE];
+    int transfer_fin = 1;
     
     char cwd[256] = {'/', 0};
 
@@ -108,6 +55,8 @@ void *session_thread(void *arg) {
 
     struct command com;
     com.text = buf;
+
+    pthread_t transfer_th = 0;
 
     while (curr_state != FIN) {
 
@@ -162,22 +111,30 @@ void *session_thread(void *arg) {
                     close(data_sock);
                 } 
                 else if (!com_cmp(&com, "RETR")) {
-                    char *path = com_get_path(&com, local_root, cwd);
+                    char *path;
                     int fd;
 
-                    fd = open(path, O_RDONLY);
-                    free(path);
-                    
-                    transfer(c, fd, data_sock, curr_mode==BINARY ? reg_read : read_i2a);
+                    if (transfer_fin) {
+                        path = com_get_path(&com, local_root, cwd);
+                        fd = open(path, O_RDONLY);
+                        free(path);
+                        transfer_th = transfer(c, fd, data_sock, curr_mode==BINARY ? reg_read : read_i2a, &transfer_fin);
+                    } else {
+                        server_say(c, 500, "Transfer in progress");
+                    }
                 }
                 else if (!com_cmp(&com, "STOR")) {
-                    char *path = com_get_path(&com, local_root, cwd);
+                    char *path;
                     int fd;
 
-                    fd = open(path, O_WRONLY|O_CREAT, 0644);
-                    free(path);
-                    
-                    transfer(c, data_sock, fd, curr_mode==BINARY ? reg_read : read_a2i);
+                    if (transfer_fin) {
+                        path = com_get_path(&com, local_root, cwd);
+                        fd = open(path, O_WRONLY|O_CREAT, 0644);
+                        free(path);
+                        transfer_th = transfer(c, data_sock, fd, curr_mode==BINARY ? reg_read : read_a2i, &transfer_fin);
+                    } else {
+                        server_say(c, 500, "Transfer in progress");
+                    }
                 } 
                 else if (!com_cmp(&com, "MKD")) {
                     char *path = com_get_path(&com, local_root, cwd);
@@ -226,6 +183,23 @@ void *session_thread(void *arg) {
                         goto disconnect;
                     }
                     server_say(c, 200, "PORT command successful");
+                } else if (!com_cmp(&com, "ABOR")) {
+                    if (transfer_th) {
+                        r=pthread_cancel(transfer_th);
+                        if (r != 0) {
+                            perror("Cancel thread");
+                            server_say(c, 500, "Abort error");
+                        } else {
+                            close(data_sock);
+                            server_say(c, 226, "Abort successful");
+                        }
+                    } else if (curr_state == LOGIN){
+                        server_say(c, 226, "Abort successful");
+                    } else {
+                        server_say(c, 225, "Nothing to abort");
+                    }
+                    
+                    curr_state = IDLE;
                 } else if (!com_cmp(&com, "QUIT")) {
                     server_say(c, 221, "Goodbye");
                     curr_state = FIN;
