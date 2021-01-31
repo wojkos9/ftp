@@ -84,7 +84,7 @@ void *session_thread(void *arg) {
                         curr_mode = BINARY;
                         server_say(c, 220, "Switch to BINARY");
                     } else {
-                        server_say(c, 202, "Not implemented");
+                        server_say(c, 502, "Not implemented");
                     }
                 } 
                 else if (!com_cmp(&com, "LIST")) {
@@ -120,7 +120,7 @@ void *session_thread(void *arg) {
                         free(path);
                         transfer_th = transfer(c, fd, data_sock, curr_mode==BINARY ? reg_read : read_i2a, &transfer_fin);
                     } else {
-                        server_say(c, 500, "Transfer in progress");
+                        server_say(c, 450, "Another transfer in progress");
                     }
                 }
                 else if (!com_cmp(&com, "STOR")) {
@@ -133,7 +133,7 @@ void *session_thread(void *arg) {
                         free(path);
                         transfer_th = transfer(c, data_sock, fd, curr_mode==BINARY ? reg_read : read_a2i, &transfer_fin);
                     } else {
-                        server_say(c, 500, "Transfer in progress");
+                        server_say(c, 450, "Another transfer in progress");
                     }
                 } 
                 else if (!com_cmp(&com, "MKD")) {
@@ -184,7 +184,7 @@ void *session_thread(void *arg) {
                     }
                     server_say(c, 200, "PORT command successful");
                 } else if (!com_cmp(&com, "ABOR")) {
-                    if (transfer_th) {
+                    if (!transfer_fin) {
                         r=pthread_cancel(transfer_th);
                         if (r != 0) {
                             perror("Cancel thread");
@@ -205,7 +205,7 @@ void *session_thread(void *arg) {
                     curr_state = FIN;
                 } else {
                     printf("N/I: %s\n", com.text);
-                    server_say(c, 202, "Not implemented");
+                    server_say(c, 502, "Not implemented");
                 }
                 break;
             }
