@@ -247,10 +247,21 @@ void *session_thread(void *arg) {
     return NULL;
 }
 #define N_THREADS 16
-int main() {
+int main(int argc, char *argv[]) {
     struct sockaddr_in sin;
     int c;
     int r;
+    int port;
+
+    if (argc > 1) {
+        port = atoi(argv[1]);
+        if (port <= 0) {
+            fprintf(stderr, "Incorrect port number\n");
+            return -1;
+        }
+    } else {
+        port = PORT;
+    }
 
     printf("Transfer buffer size: %d\n", TBSIZE);
     
@@ -266,7 +277,7 @@ int main() {
 
     bzero(&sin, sizeof(struct sockaddr_in));
     sin.sin_addr.s_addr = INADDR_ANY;
-    sin.sin_port = htons(PORT);
+    sin.sin_port = htons(port);
     sin.sin_family = AF_INET;
 
     r = bind(s, (struct sockaddr*)&sin, sizeof(struct sockaddr_in));
