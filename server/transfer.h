@@ -29,9 +29,7 @@ void *transfer_thread(void *args) {
     int r;
     struct read_params r_params = {0, 0};
 
-    fprintf(stderr, "Transfer thread\n");
-
-    if (from_fd == -1) {
+    if (from_fd < 0 || to_fd < 0) {
         server_say(c, 550, "Could not open");
         *(params->transfer_fin) = 2;
     } else {
@@ -52,12 +50,12 @@ void *transfer_thread(void *args) {
             server_say(c, 226, "Transfer complete");
         else
             server_say(c, 451, "An error ocurred during transfer");
+
+        close(from_fd);
+        close(to_fd);
     }
     
-    if (to_fd != c) {
-        close(to_fd);
-        to_fd = c;
-    }
+    
     *(params->transfer_fin) = 1;
 
     free(params);

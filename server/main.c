@@ -37,7 +37,7 @@ void cleanup(int _) {
 struct thread_params {
     int c;
 };
-enum state{INIT, IDLE, LOGIN, ERROR, FIN};
+enum state{INIT, IDLE, LOGIN, FIN};
 enum mode{ASCII, BINARY};
 
 void *session_thread(void *arg) {
@@ -70,7 +70,6 @@ void *session_thread(void *arg) {
                 com_readn(&com, c, BSIZE);
 
                 if (!com_cmp(&com, "USER")) {
-                    printf("U\n");
                     curr_state = LOGIN;
                     server_say(c, 331, "password, please");
                     break;
@@ -118,7 +117,11 @@ void *session_thread(void *arg) {
                         path = com_get_path(&com, local_root, cwd);
                         fd = open(path, O_RDONLY);
                         free(path);
-                        transfer_th = transfer(c, fd, data_sock, curr_mode==BINARY ? reg_read : read_i2a, &transfer_fin);
+                        if (fd == -1) {
+                            server_say(c, 550, "Could not read file");
+                        } else {
+                            transfer_th = transfer(c, fd, data_sock, curr_mode==BINARY ? reg_read : read_i2a, &transfer_fin);
+                        }
                     } else {
                         server_say(c, 450, "Another transfer in progress");
                     }
@@ -131,7 +134,11 @@ void *session_thread(void *arg) {
                         path = com_get_path(&com, local_root, cwd);
                         fd = open(path, O_WRONLY|O_CREAT, 0644);
                         free(path);
-                        transfer_th = transfer(c, data_sock, fd, curr_mode==BINARY ? reg_read : read_a2i, &transfer_fin);
+                        if (fd == -1) {
+                            server_say(c, 550, "Could not create file");
+                        } else {
+                            transfer_th = transfer(c, data_sock, fd, curr_mode==BINARY ? reg_read : read_a2i, &transfer_fin);
+                        }
                     } else {
                         server_say(c, 450, "Another transfer in progress");
                     }
@@ -139,16 +146,16 @@ void *session_thread(void *arg) {
                 else if (!com_cmp(&com, "MKD")) {
                     char *path = com_get_path(&com, local_root, cwd);
                     if (!path || (r = mkdir(path, 0755)) == -1) {
-                        server_say(c, 550, "Operation failed");
+                        server_say(c, 550, "Creating directory failed");
                     } else {
-                        server_say(c, 250, "Directory created");
+                        server_say(c, 257, "Directory created");
                     }
                     if (path) free(path);
                 } 
                 else if (!com_cmp(&com, "RMD")) {
                     char *path = com_get_path(&com, local_root, cwd);
                     if (!path || (r = rmdir(path)) == -1) {
-                        server_say(c, 550, "Operation failed");
+                        server_say(c, 550, "Removing directory failed");
                     } else {
                         server_say(c, 250, "Directory removed");
                     }
@@ -170,9 +177,13 @@ void *session_thread(void *arg) {
                     int addr[6];
                     peer_sa.sin_family = AF_INET;
                     r = sscanf(arg, "%d,%d,%d,%d,%d,%d", &addr[0], &addr[1], &addr[2], &addr[3], &addr[4], &addr[5]);
+                    printf("r: %d\n", r);
+                    if (r != 6) {
+                        server_say(c, 501, "Syntax error");
+                        break;
+                    }
                     peer_sa.sin_addr.s_addr = addr[0]+(1<<8)*addr[1]+(1<<16)*addr[2]+(1<<24)*addr[3];
                     peer_sa.sin_port = addr[4]+(1<<8)*addr[5];
-                    printf("%s\n", arg);
                     
                     printf("Connecting to %s:", inet_ntoa(peer_sa.sin_addr));
                     printf("%d\n", ntohs(peer_sa.sin_port));
@@ -180,15 +191,17 @@ void *session_thread(void *arg) {
                     r = connect(data_sock, (struct sockaddr*)&peer_sa, sizeof(struct sockaddr_in));
                     if (r == -1) {
                         perror("Open data connection");
-                        goto disconnect;
+                        server_say(c, 421, "Data connection cannot be established");
+                    } else {
+                        server_say(c, 200, "PORT command successful");
                     }
-                    server_say(c, 200, "PORT command successful");
+                    
                 } else if (!com_cmp(&com, "ABOR")) {
                     if (!transfer_fin) {
                         r=pthread_cancel(transfer_th);
                         if (r != 0) {
                             perror("Cancel thread");
-                            server_say(c, 500, "Abort error");
+                            server_say(c, 421, "Abort error");
                         } else {
                             close(data_sock);
                             server_say(c, 226, "Abort successful");
@@ -214,8 +227,7 @@ void *session_thread(void *arg) {
             {
                 com_readn(&com, c, BSIZE);
 
-                if (!com_cmp(&com, "PASSWORD")) {
-                    printf("P\n");
+                if (!com_cmp(&com, "PASS")) {
                     server_say(c, 230, "logged in");
                     curr_state = IDLE;
                 }
@@ -228,7 +240,6 @@ void *session_thread(void *arg) {
         
     }
     
-    disconnect:
     printf("Disconnecting client\n");
     close(c);
     c = -1;
