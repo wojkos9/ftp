@@ -1,5 +1,5 @@
 main: main.c
-	gcc -o main main.c -Wall
+	gcc -o main main.c -Wall -pthread $(CFLAGS)
 
 clean:
 	rm main
