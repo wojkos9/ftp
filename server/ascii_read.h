@@ -2,10 +2,7 @@
 #define ASCII_READ_H
 #include <unistd.h>
 
-struct read_params {
-    char cache;
-    int is_cached;
-};
+#include "utils.h"
 
 
 long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params) {
