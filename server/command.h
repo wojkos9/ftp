@@ -8,6 +8,7 @@
 
 struct command {char *text; char *save; int toklen; int state;};
 
+// advance 1 word in command
 int com_adv(struct command *com) {
     if (0 != com->state) {
         return com->state;
@@ -33,6 +34,7 @@ int com_adv(struct command *com) {
     return 0;
 }
 
+// read command into buffer[:n]
 int com_readn(struct command *com, int sockfd, int n) {
     int r;
     com->state = 0;
@@ -54,6 +56,7 @@ int com_readn(struct command *com, int sockfd, int n) {
     return i;
 }
 
+// case independent strcmp on current word in command
 int com_cmp(struct command *com, char *cmps) {
     int r, i, n;
     i = 0;
@@ -62,6 +65,7 @@ int com_cmp(struct command *com, char *cmps) {
     return r;
 }
 
+// store argument in dst[:n]
 int com_storen(struct command *com, char *dst, int n) {
     if (n < com->toklen+1)
         return -1;
@@ -69,6 +73,7 @@ int com_storen(struct command *com, char *dst, int n) {
     return 0;
 }
 #define BSIZE1 256
+// process next argument as path and return as "absolute" path
 char* com_get_path(struct command *com, const char *local_root, char *cwd) {
     char arg[BSIZE1] = {0};
     char *buf;
@@ -86,6 +91,7 @@ char* com_get_path(struct command *com, const char *local_root, char *cwd) {
     return buf;
 }
 
+// create sockaddr_in from next command argument
 int com_get_sockaddr(struct command *com, struct sockaddr_in *sa) {
     int r;
     char arg[BSIZE1] = {0};

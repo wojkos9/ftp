@@ -13,6 +13,7 @@ struct read_params {
 
 typedef long (*readf_t)(int, void*, long unsigned int, struct read_params *);
 
+// wrapper for compatibility
 long reg_read(int fd, void* buf, long unsigned int n, struct read_params *unused) {
     return read(fd, buf, n);
 }
@@ -25,6 +26,7 @@ struct transfer_params {
 #define TBSIZE 4096
 #endif
 
+// sends file over data connection
 void *transfer_thread(void *args) {
     struct transfer_params *params = args;
     int c = params->c;
@@ -69,6 +71,7 @@ void *transfer_thread(void *args) {
     return NULL;
 }
 
+// wrapper for creating the transfer thread
 pthread_t transfer(int c, int from_fd, int to_fd, readf_t read_f, int *transfer_fin) {
     struct transfer_params *params = malloc(sizeof(struct transfer_params));
     params->c = c;
