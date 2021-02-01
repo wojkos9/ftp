@@ -1,6 +1,5 @@
 package sample.controllers;
 
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -8,28 +7,20 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import sample.ConnectionManager;
 import sample.Main;
-import javafx.application.Platform;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.layout.StackPane;
-import javafx.scene.text.Text;
-import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class MainGuiController extends Application implements Initializable {
+public class MainGuiController implements Initializable {
     public Button choose_button;
     public javafx.scene.control.Label label_file;
     public javafx.scene.control.TextField dirName;
 
-    private ConnectionManager connectionManager = Main.getConnectionManager();
+    private final ConnectionManager connectionManager = Main.getConnectionManager();
 
     private FileChooser fileChooser;
 
@@ -59,7 +50,7 @@ public class MainGuiController extends Application implements Initializable {
     }
 
     @FXML
-    public void putHandler(ActionEvent actionEvent) throws IOException {
+    public void putHandler() throws IOException {
         Platform.runLater(() -> {
             String filename = label_file.getText();
             if (filename.equals("")) return;
@@ -85,10 +76,10 @@ public class MainGuiController extends Application implements Initializable {
 
     }
 
-    public void getHandler(ActionEvent actionEvent) {
+    public void getHandler() {
         Platform.runLater(() -> {
-            String filename = choice_box.getValue();
-            if (filename.equals("")) return;
+            String filename = choice_box.getSelectionModel().getSelectedItem();
+            if (filename == null) return;
             Socket dataSocket = connectionManager.forkConnection();
             connectionManager.send("RETR " + filename + "\r\n");
             try (InputStream in = dataSocket.getInputStream();
@@ -109,7 +100,7 @@ public class MainGuiController extends Application implements Initializable {
         });
     }
 
-    public void createDirectory(ActionEvent actionEvent) throws IOException {
+    public void createDirectory() throws IOException {
         Platform.runLater(() -> {
             if (dirName.getText().equals("")) return;
             connectionManager.send("MKD " + dirName.getText() + "\r\n");
@@ -119,10 +110,8 @@ public class MainGuiController extends Application implements Initializable {
 
     }
 
-    public void dirHandler(ActionEvent actionEvent) throws IOException {
-        Platform.runLater(() -> {
-            updateDirList();
-        });
+    public void dirHandler() throws IOException {
+        Platform.runLater(this::updateDirList);
     }
 
     private void updateDirList() {
@@ -158,7 +147,7 @@ public class MainGuiController extends Application implements Initializable {
     }
 
 
-    public void binaryHandler(ActionEvent actionEvent) {
+    public void binaryHandler() {
         Platform.runLater(() -> {
             connectionManager.send("TYPE I\r\n");
         });
@@ -170,7 +159,4 @@ public class MainGuiController extends Application implements Initializable {
         });
     }
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-    }
 }

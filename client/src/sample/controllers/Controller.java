@@ -5,7 +5,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import sample.Main;
@@ -19,17 +18,13 @@ import java.util.logging.Logger;
 public class Controller implements Initializable {
     public TextField ip_adress;
     public TextField port_number;
-    private ConnectionManager connectionManager;
 
     @FXML
     private Button connect_button;
 
     @FXML
-    private ChoiceBox<Object> choice_box;
-
-    @FXML
     public void connectToServer() throws InterruptedException {
-        connectionManager = new ConnectionManager();
+        ConnectionManager connectionManager = new ConnectionManager();
         Main.setConnectionManager(connectionManager);
         connectionManager.setConnectionParams(ip_adress.getText(), port_number.getText());
         connectionManager.startConnection();
