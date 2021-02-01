@@ -1,4 +1,4 @@
-main: main.c *.h
+ftp-server: main.c *.h
 	gcc -o ftp-server main.c -Wall -pthread $(CFLAGS)
 
 clean:
