@@ -4,7 +4,7 @@
 
 #include "utils.h"
 
-
+// read from ASCII to binary
 long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params) {
     char *cache = &params->cache;
     int *is_cached = &params->is_cached;
@@ -21,16 +21,21 @@ long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params
             r = read(fd, &buf, 1);
             if (r <= 0) goto leave;
 
+            // if sequence was \r\n, store just the \n
             if (buf == '\n') {
                 cdst[i] = buf;
-            } else {
+            } 
+            // otherwise, keep processing
+            else {
                 cdst[i] = '\r';
                 i++;
-                if (buf == '\r')
-                    goto process_cache;
                 if (i < n) {
+                    if (buf == '\r')
+                        goto process_cache;
                     cdst[i] = buf;
-                } else {
+                } 
+                // if buffer is to overflow -> cache
+                else {
                     *cache = buf;
                     *is_cached = 1;
                     return i;
@@ -42,7 +47,7 @@ long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params
         i++;
         *is_cached = 0;
     }
-
+    // read char by char until <CR> occurs, then process it
     for(; i < n; i++) {
         r = read(fd, &buf, 1);
         if (r <= 0) goto leave;
@@ -58,6 +63,7 @@ long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params
     return i ? i : r;
 }
 
+// read from binary to ASCII
 long read_i2a(int fd, void *dst, long unsigned int n, struct read_params *params) {
     int r, i;
     char *cdst = (char*)dst;
@@ -65,7 +71,8 @@ long read_i2a(int fd, void *dst, long unsigned int n, struct read_params *params
     int *is_cached = &params->is_cached;
     
     i = 0;
-
+    if (n < 1) return 0;
+    // write what was cached (<LF>)
     if (*is_cached) {
         *is_cached = 0;
         cdst[i++] = *cache;
@@ -76,6 +83,8 @@ long read_i2a(int fd, void *dst, long unsigned int n, struct read_params *params
         
         if (cdst[i] == '\n') {
             cdst[i] = '\r';
+            
+            // if no space in buffer, store <LF> for later
             if (i == n-1) {
                 *cache = '\n';
                 *is_cached = 1;
