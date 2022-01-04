@@ -5,7 +5,8 @@
 long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params) {
     char *cache = &params->cache;
     int *is_cached = &params->is_cached;
-    int r, i;
+    long unsigned int i;
+    int r;
     char buf;
     char *cdst = (char*)dst;
     buf = 0;
@@ -62,7 +63,8 @@ long read_a2i(int fd, void *dst, long unsigned int n, struct read_params *params
 
 
 long read_i2a(int fd, void *dst, long unsigned int n, struct read_params *params) {
-    int r, i;
+    long unsigned int i;
+    int r;
     char *cdst = (char*)dst;
     char *cache = &params->cache;
     int *is_cached = &params->is_cached;
