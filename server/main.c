@@ -1,16 +1,20 @@
 #include <stdio.h>
-#include <netinet/in.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
 #include <signal.h>
 #include <pthread.h>
 #include <getopt.h>
-
+#include "types.h"
+#include "consts.h"
+#include "utils.h"
 #include "session.h"
 
-#define PORT 2121
-#define DEFAULT_ROOT "root"
 
-
+// main server socket descriptor
 int s;
+
 // SIGINT handler
 void cleanup(int _) {
     int r;
@@ -21,7 +25,7 @@ void cleanup(int _) {
     exit(0);
 }
 
-#define N_THREADS 16
+
 int main(int argc, char *argv[]) {
     struct sockaddr_in sin;
     int c;
@@ -52,10 +56,10 @@ int main(int argc, char *argv[]) {
     }
     if (!*local_root)
         strcpy(local_root, DEFAULT_ROOT);
-        
+
     printf("Transfer buffer size: %d\n", TBSIZE);
     printf("Root directory: %s\n", local_root);
-    
+
     signal(SIGINT, cleanup);
 
 
@@ -66,7 +70,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    // set SO_REUSEADDR
     set_nonblocking(s);
 
     // bind to 0.0.0.0:port
@@ -88,7 +91,6 @@ int main(int argc, char *argv[]) {
 
     // accept clients in a loop
     for (;;) {
-        
         struct sockaddr_in cin;
         socklen_t slen = sizeof(struct sockaddr_in);
         c = accept(s, (struct sockaddr*)&cin, &slen);
