@@ -1,4 +1,4 @@
-.*
 !.gitignore
 ftp-server
 tmp/
+obj/*.o
